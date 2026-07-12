@@ -1,20 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studio_butterfly/env.dart';
+import 'package:studio_butterfly/presentation/sms/sms_console_page.dart';
+import 'package:studio_butterfly/service/local_storage_service.dart';
 
-void main() {
-  runApp(const MainApp());
+import 'core/theme/app_theme.dart';
+import 'data/models/theme_mode_model.dart';
+import 'provider/theme/theme_mode_provider.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await LocalStorageService().init();
+
+  runApp(const ProviderScope(child: StudioButterflyApp()));
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class StudioButterflyApp extends ConsumerWidget {
+  const StudioButterflyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    return MaterialApp(
+      title: Environment.appName,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeMode.materialThemeMode,
+      home: const SmsScreen(),
     );
   }
 }
