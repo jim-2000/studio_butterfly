@@ -12,4 +12,7 @@ class AppSpacing {
   static const md = 16.0;
   static const lg = 24.0;
   static const xl = 32.0;
+
+  /// Minimum touch target edge, per Material accessibility guidance.
+  static const minTapTarget = 48.0;
 }

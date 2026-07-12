@@ -29,7 +29,7 @@ class ForbiddenApiException extends ApiException {
 
 /// `429` — rate limited; [retryAfter] is parsed from the `Retry-After` header.
 class RateLimitedApiException extends ApiException {
-  const RateLimitedApiException(this.retryAfter, [super.message = 'Rate limited']);
+  const RateLimitedApiException(this.retryAfter, [super.message = 'Too Many Request']);
 
   final Duration retryAfter;
 }

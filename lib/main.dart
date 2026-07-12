@@ -22,12 +22,6 @@ class StudioButterflyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
-    return MaterialApp(
-      title: Environment.appName,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: themeMode.materialThemeMode,
-      home: const SmsScreen(),
-    );
+    return MaterialApp(debugShowCheckedModeBanner: false, title: Environment.appName, theme: AppTheme.light, darkTheme: AppTheme.dark, themeMode: themeMode.materialThemeMode, home: const SmsScreen());
   }
 }
