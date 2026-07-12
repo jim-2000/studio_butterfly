@@ -4,6 +4,9 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../../env.dart';
+import '../../service/local_storage_key.dart';
+import '../../service/local_storage_service.dart';
 import 'api_exception.dart';
 
 /// Thin wrapper around [http.Client]: attaches auth/tenant headers, applies
@@ -11,39 +14,32 @@ import 'api_exception.dart';
 /// transport failure) to a typed [ApiException] — call sites never see a
 /// raw [http.Response] or a `dynamic` body.
 class ApiClient {
-  ApiClient({
-    required http.Client httpClient,
-    required String baseUrl,
-    required Map<String, String> Function() authHeaders,
-    Duration timeout = const Duration(seconds: 10),
-  })  : _httpClient = httpClient,
-        _baseUrl = baseUrl,
-        _authHeaders = authHeaders,
-        _timeout = timeout;
+  ApiClient({String? baseUrl, http.Client? httpClient, Future<Map<String, String>> Function()? authHeaders, Duration timeout = const Duration(seconds: 10)}) : _baseUrl = baseUrl ?? Environment.kApiBase, _httpClient = httpClient ?? http.Client(), _authHeaders = authHeaders ?? apiAuthHeaders, _timeout = timeout;
 
   final http.Client _httpClient;
   final String _baseUrl;
-  final Map<String, String> Function() _authHeaders;
+  final Future<Map<String, String>> Function() _authHeaders;
   final Duration _timeout;
 
-  Future<Map<String, dynamic>> get(
-    String path, {
-    Map<String, String>? query,
-  }) async {
+  /// Reads the bearer token + tenant id persisted by the session/tenant
+  /// switcher. Injectable via the constructor so tests can stub fixed
+  /// headers instead of going through [LocalStorageService].
+  static Future<Map<String, String>> apiAuthHeaders() async {
+    final storage = LocalStorageService();
+    final token = storage.getString(LocalStorageKey.accessTokenKey);
+    final tenantId = storage.getString(LocalStorageKey.tenantIdKey);
+    return {if (token != null) 'Authorization': 'Bearer $token', if (tenantId != null) 'X-Tenant-Id': tenantId};
+  }
+
+  Future<Map<String, dynamic>> get(String path, {Map<String, String>? query}) async {
     final uri = Uri.parse('$_baseUrl$path').replace(queryParameters: query);
-    final response = await _send(() => _httpClient.get(uri, headers: _authHeaders()));
+    final response = await _send(() async => _httpClient.get(uri, headers: await _authHeaders()));
     return _decode(response);
   }
 
   Future<Map<String, dynamic>> post(String path, {Object? body}) async {
     final uri = Uri.parse('$_baseUrl$path');
-    final response = await _send(
-      () => _httpClient.post(
-        uri,
-        headers: {..._authHeaders(), 'Content-Type': 'application/json'},
-        body: jsonEncode(body),
-      ),
-    );
+    final response = await _send(() async => _httpClient.post(uri, headers: {...await _authHeaders(), 'Content-Type': 'application/json'}, body: jsonEncode(body)));
     return _decode(response);
   }
 
@@ -78,10 +74,7 @@ class ApiClient {
 
     switch (response.statusCode) {
       case 400:
-        return ValidationApiException(
-          (body?['errorCode'] as String?) ?? 'VALIDATION_ERROR',
-          (body?['message'] as String?) ?? 'Invalid request',
-        );
+        return ValidationApiException((body?['errorCode'] as String?) ?? 'VALIDATION_ERROR', (body?['message'] as String?) ?? 'Invalid request');
       case 401:
         return const UnauthorizedApiException();
       case 403:
@@ -93,10 +86,9 @@ class ApiClient {
       case 502:
         return const BadGatewayApiException();
       default:
-        return UnknownApiException(
-          response.statusCode,
-          (body?['message'] as String?) ?? 'Unexpected error',
-        );
+        return UnknownApiException(response.statusCode, (body?['message'] as String?) ?? 'Unexpected error');
     }
   }
+
+  void dispose() => _httpClient.close();
 }
