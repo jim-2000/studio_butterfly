@@ -1,3 +1,4 @@
-# studio_butterfly
+# Studio Butterfly IT - Task Assessment (Flutter)
 
-A new Flutter project.
+## Rick and Morty Character Explorer
+> This app is a simple "Sms Console" built for the task assessment.
